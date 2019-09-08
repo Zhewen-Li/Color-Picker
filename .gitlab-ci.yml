@@ -1,0 +1,35 @@
+image: benswift/comp1720-2018-gitlab-ci:0.2.0
+
+cache:
+  paths:
+  - ~/.cache/pip/
+
+page-deploy:
+  tags:
+    - comp1720
+  stage: deploy
+  script:
+    - mkdir -p /srv/gitlab-ce-pages/staging/$CI_BUILD_ID/$CI_BUILD_REF_NAME/$CI_PROJECT_PATH
+    # copy assets folder, and all top-level .html and .js files
+    - cp -r assets *.html *.js /srv/gitlab-ce-pages/staging/$CI_BUILD_ID/$CI_BUILD_REF_NAME/$CI_PROJECT_PATH
+  only:
+    - master
+
+# this config used for all python checks
+.pipenv-setup: &pipenv-setup
+  stage: test
+  allow_failure: true
+  tags:
+    - comp1720
+  before_script:
+    # this step is required because that's where the pipenv container puts the
+    # things, and I can't get gitlab CI to build the project in there
+    - mv /app/* .
+    - pipenv install
+
+# here are the actual checks
+
+statement-of-originality:
+  <<: *pipenv-setup
+  script:
+    - pipenv run python -c "from validate import sys,validate_soo; sys.exit(validate_soo())"
